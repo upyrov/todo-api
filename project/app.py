@@ -25,6 +25,7 @@ app = FastAPI(title="TODO API", version="1.0.0", lifespan=lifespan)
 @app.get("/tasks", response_model=list[Task])
 def get_tasks(
     status: Optional[TaskStatus] = Query(None, description="Filter by status"),
+    category: Optional[str] = Query(None, description="Filter by category"),
     search: Optional[str] = Query(None, description="Search in title and description"),
     sort_by: Optional[str] = Query(
         "priority", description="Sort by field (priority, id, title)"
@@ -35,6 +36,7 @@ def get_tasks(
     Display a list of all tasks with optional filtering, searching, and sorting.
 
     - **status**: Filter by done/undone
+    - **category**: Filter by category
     - **search**: Search text in title and description
     - **sort_by**: Sort by priority, id, or title (default: priority)
     - **order**: asc or desc (default: asc)
@@ -43,7 +45,10 @@ def get_tasks(
         statement = select(Task)
 
         if status:
-            statement = statement.where(Task.status == status) # filters by status
+            statement = statement.where(Task.status == status)
+
+        if category:
+            statement = statement.where(Task.category == category)
 
         # Search in title and description (ILIKE for case-insensitive search)
         if search:
@@ -126,6 +131,15 @@ def get_task(task_id: int):
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         return task
+
+
+@app.get("/categories", response_model=list[str])
+def get_categories():
+    """Get all unique categories"""
+    with Session(engine) as session:
+        statement = select(Task.category).where(Task.category.is_not(None)).distinct()
+        categories = session.exec(statement).all()
+        return sorted([category for category in categories if category])
 
 
 @app.get("/")

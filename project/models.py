@@ -14,6 +14,7 @@ class TaskBase(SQLModel):
     description: Optional[str] = None
     status: TaskStatus = Field(default=TaskStatus.UNDONE)
     priority: int = Field(default=5, ge=1, le=10)
+    category: Optional[str] = Field(default=None, index=True)
 
 
 class Task(TaskBase, table=True):
@@ -28,4 +29,5 @@ class TaskUpdate(SQLModel):
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[TaskStatus] = None
+    category: Optional[str] = None
     priority: Optional[int] = Field(default=None, ge=1, le=10)
