@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import date
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Session, select
 from typing import Annotated, Optional
@@ -26,6 +27,7 @@ app = FastAPI(title="TODO API", version="1.0.0", lifespan=lifespan)
 def get_tasks(
     status: Optional[TaskStatus] = Query(None, description="Filter by status"),
     category: Optional[str] = Query(None, description="Filter by category"),
+    overdue: Optional[bool] = Query(None, description="Filter overdue tasks"),
     search: Optional[str] = Query(None, description="Search in title and description"),
     sort_by: Optional[str] = Query(
         "priority", description="Sort by field (priority, id, title)"
@@ -37,6 +39,7 @@ def get_tasks(
 
     - **status**: Filter by done/undone
     - **category**: Filter by category
+    - **overdue**: Filter overdue tasks
     - **search**: Search text in title and description
     - **sort_by**: Sort by priority, id, or title (default: priority)
     - **order**: asc or desc (default: asc)
@@ -49,6 +52,17 @@ def get_tasks(
 
         if category:
             statement = statement.where(Task.category == category)
+        
+        if overdue is not None:
+            today = date.today()
+            if overdue:
+                statement = statement.where(
+                    (Task.due_date < today) & (Task.status == TaskStatus.UNDONE)
+                )
+            else:
+                statement = statement.where(
+                    (Task.due_date >= today) | (Task.due_date.is_(None))
+                )
 
         # Search in title and description (ILIKE for case-insensitive search)
         if search:
