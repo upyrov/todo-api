@@ -15,6 +15,10 @@ Copy the example environment file and adjust it as needed:
 
 `cp .env.example .env`
 
+Activate the environment:
+
+`source .venv/bin/activate`
+
 Run the application:
 
 `uv run uvicorn project.app:app --reload --env-file .env`
