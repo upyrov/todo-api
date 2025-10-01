@@ -582,6 +582,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "psycopg2-binary" },
     { name = "sqlmodel" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.metadata]
@@ -589,6 +590,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.118.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "sqlmodel", specifier = ">=0.0.25" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.37.0" },
 ]
 
 [[package]]
