@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import date
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 from typing import Annotated, Optional
 
@@ -21,6 +22,21 @@ async def lifespan(app: FastAPI):
 
 SessionDep = Annotated[Session, Depends(get_session)]
 app = FastAPI(title="TODO API", version="1.0.0", lifespan=lifespan)
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "https://xrovtodo.vercel.app"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/tasks", response_model=list[Task])
