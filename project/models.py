@@ -5,9 +5,9 @@ from typing import Optional
 from sqlmodel import Field, SQLModel
 
 
-class TaskStatus(Enum):
-    DONE = 1
-    UNDONE = 2
+class TaskStatus(str, Enum):
+    DONE = "done"
+    UNDONE = "undone"
 
 
 class TaskBase(SQLModel):
