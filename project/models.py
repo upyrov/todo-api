@@ -14,7 +14,7 @@ class TaskBase(SQLModel):
     title: str = Field(index=True)
     description: Optional[str] = None
     status: TaskStatus = Field(default=TaskStatus.UNDONE)
-    priority: int = Field(default=5, ge=1, le=10)
+    priority: int = Field(default=5, ge=1)
     category: Optional[str] = Field(default=None, index=True)
     due_date: Optional[date] = None
 
