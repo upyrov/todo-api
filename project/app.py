@@ -27,7 +27,7 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
     "http://localhost:3000",
-    "https://xrovtodo.vercel.app"
+    "https://xrov-todo.vercel.app"
 ]
 
 app.add_middleware(
