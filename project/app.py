@@ -42,6 +42,7 @@ app.add_middleware(
 
 @app.get("/tasks", response_model=list[Task])
 def get_tasks(
+    session: SessionDep,
     status: Optional[TaskStatus] = Query(None, description="Filter by status"),
     category: Optional[str] = Query(None, description="Filter by category"),
     overdue: Optional[bool] = Query(None, description="Filter overdue tasks"),
@@ -49,7 +50,7 @@ def get_tasks(
     sort_by: Optional[str] = Query(
         "priority", description="Sort by field (priority, id, title)"
     ),
-    order: Optional[str] = Query("asc", description="Sort order (asc, desc)"),
+    order: Optional[str] = Query("asc", description="Sort order (asc, desc)")
 ):
     """
     Display a list of all tasks with optional filtering, searching, and sorting.
@@ -61,103 +62,96 @@ def get_tasks(
     - **sort_by**: Sort by priority, id, or title (default: priority)
     - **order**: asc or desc (default: asc)
     """
-    with Session(engine) as session:
-        statement = select(Task)
+    statement = select(Task)
+    if status:
+        statement = statement.where(Task.status == status)
 
-        if status:
-            statement = statement.where(Task.status == status)
-
-        if category:
-            statement = statement.where(Task.category == category)
+    if category:
+        statement = statement.where(Task.category == category)
         
-        if overdue is not None:
-            today = date.today()
-            if overdue:
-                statement = statement.where(
-                    (Task.due_date < today) & (Task.status == TaskStatus.UNDONE)
-                )
-            else:
-                statement = statement.where(
-                    (Task.due_date >= today) | (Task.due_date.is_(None))
-                )
-
-        # Search in title and description (ILIKE for case-insensitive search)
-        if search:
-            search_term = f"%{search}%"
+    if overdue is not None:
+        today = date.today()
+        if overdue:
             statement = statement.where(
-                (Task.title.ilike(search_term)) | (Task.description.ilike(search_term))
+                (Task.due_date < today) & (Task.status == TaskStatus.UNDONE)
+            )
+        else:
+            statement = statement.where(
+                (Task.due_date >= today) | (Task.due_date.is_(None))
             )
 
-        if sort_by == "priority":
-            statement = statement.order_by(
-                Task.priority.desc() if order.lower() == "desc" else Task.priority.asc()
-            )
-        elif sort_by == "title":
-            statement = statement.order_by(
-                Task.title.desc() if order.lower() == "desc" else Task.title.asc()
-            )
-        elif sort_by == "id":
-            statement = statement.order_by(
-                Task.id.desc() if order.lower() == "desc" else Task.id.asc()
-            )
+    # Search in title and description (ILIKE for case-insensitive search)
+    if search:
+        search_term = f"%{search}%"
+        statement = statement.where(
+            (Task.title.ilike(search_term)) | (Task.description.ilike(search_term))
+        )
 
-        tasks = session.exec(statement).all()
-        return tasks
+    if sort_by == "priority":
+        statement = statement.order_by(
+            Task.priority.desc() if order.lower() == "desc" else Task.priority.asc()
+        )
+    elif sort_by == "title":
+        statement = statement.order_by(
+            Task.title.desc() if order.lower() == "desc" else Task.title.asc()
+        )
+    elif sort_by == "id":
+        statement = statement.order_by(
+            Task.id.desc() if order.lower() == "desc" else Task.id.asc()
+        )
+
+    tasks = session.exec(statement).all()
+    return tasks
 
 
 @app.post("/tasks", response_model=Task, status_code=201)
-def create_task(task: TaskCreate):
-    with Session(engine) as session:
-        db_task = Task.model_validate(task)
-        session.add(db_task)
-        session.commit()
-        session.refresh(db_task)
-        return db_task
+def create_task(task: TaskCreate, session: SessionDep):
+    db_task = Task.model_validate(task)
+    session.add(db_task)
+    session.commit()
+    session.refresh(db_task)
+    return db_task
 
 
 @app.delete("/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int):
-    with Session(engine) as session:
-        task = session.get(Task, task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
-        session.delete(task)
-        session.commit()
+def delete_task(task_id: int, session: SessionDep):
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    session.delete(task)
+    session.commit()
 
 
 @app.patch("/tasks/{task_id}", response_model=Task)
-def update_task(task_id: int, task_update: TaskUpdate):
-    with Session(engine) as session:
-        task = session.get(Task, task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+def update_task(task_id: int, task_update: TaskUpdate, session: SessionDep):
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
 
-        task_data = task_update.model_dump(exclude_unset=True)
-        for key, value in task_data.items():
-            setattr(task, key, value)
+    task_data = task_update.model_dump(exclude_unset=True)
+    for key, value in task_data.items():
+        setattr(task, key, value)
 
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-        return task
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
 
 
 @app.get("/tasks/{task_id}", response_model=Task)
-def get_task(task_id: int):
-    with Session(engine) as session:
-        task = session.get(Task, task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
-        return task
+def get_task(task_id: int, session: SessionDep):
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
 
 
 @app.get("/categories", response_model=list[str])
-def get_categories():
+def get_categories(session: SessionDep):
     """Get all unique categories"""
-    with Session(engine) as session:
-        statement = select(Task.category).where(Task.category.is_not(None)).distinct()
-        categories = session.exec(statement).all()
-        return sorted([category for category in categories if category])
+    statement = select(Task.category).where(Task.category.is_not(None)).distinct()
+    categories = session.exec(statement).all()
+    return sorted([category for category in categories if category])
 
 
 @app.get("/")
